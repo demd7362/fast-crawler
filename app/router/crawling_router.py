@@ -1,21 +1,18 @@
-import httpx
-from bs4 import BeautifulSoup
+
 from fastapi import APIRouter
+
+from app.service.dcinside_crawling_service import crawl_recommend_posts
+from app.service.post_analyze_service import get_top_posts
 
 router = APIRouter()
 
 
-@router.get('/crawl')
-async def route_for_crawl() -> dict:
-    async with httpx.AsyncClient() as client:
-        response = await client.get('https://gall.dcinside.com/mgallery/board/lists',
-                                    params={'id': 'github', 'exception_mode': 'recommend'}, headers={
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'})
-        content = response.text
-    soup = BeautifulSoup(content, "html.parser")
+@router.get('/api/crawl/{gallery_id}')
+async def crawling_router(gallery_id: str):
+    posts = await crawl_recommend_posts(gallery_id)
+    top_views, top_likes = get_top_posts(posts)
 
-    texts = [em.text for em in soup.find_all('em')]
-
-    return {"title": None,
-            "texts": texts
-            }
+    return {
+        'topViews': top_views,
+        'topLikes': top_likes
+    }
