@@ -1,8 +1,12 @@
-import httpx
-from bs4 import BeautifulSoup
 from typing import List
 
-from app.model.Post import Post
+import httpx
+from bs4 import BeautifulSoup
+from sqlalchemy.orm import Session
+
+from app.base.Bases import Post
+from app.model import PostModel
+from app.model.PostModel import PostModel
 
 user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
 mgallery_url = 'https://gall.dcinside.com/mgallery/board/lists'
@@ -13,7 +17,7 @@ post_url_dict = {
 }
 
 
-async def crawl_recommend_posts(gallery_id: str) -> List[Post]:
+async def crawl_recommend_posts(gallery_id: str, session: Session) -> List[PostModel]:
     posts = []
 
     def get_post_url(url: str, post_no: str):
@@ -21,7 +25,7 @@ async def crawl_recommend_posts(gallery_id: str) -> List[Post]:
 
     print(f'{gallery_id} gallery crawling start')
 
-    async def get_post_rows(async_client: httpx.AsyncClient, url: str) -> List[Post]:
+    async def get_post_rows(async_client: httpx.AsyncClient, url: str) -> List[PostModel]:
         response = await async_client.get(url=url,
                                           params={'id': gallery_id, 'exception_mode': 'recommend', 'page': page},
                                           headers={'User-Agent': user_agent})
@@ -31,7 +35,7 @@ async def crawl_recommend_posts(gallery_id: str) -> List[Post]:
 
     defined_url = gallery_url
     async with httpx.AsyncClient() as client:
-        for page in range(40, 10000000):
+        for page in range(1, 10000000):
             print(f'{page} page parsing now...')
             post_rows = await get_post_rows(client, defined_url)
             if not post_rows:
@@ -40,11 +44,12 @@ async def crawl_recommend_posts(gallery_id: str) -> List[Post]:
                 else:  # 갤러리가 정의되지 않아서 posts가 비어있음
                     post_rows = await get_post_rows(client, mgallery_url)
                     if not post_rows:  # 메인도 마이너도 아니면 에러
-                        raise RuntimeError(f'gallery id {gallery_id} is invalid')
+                        print(f'gallery id {gallery_id} is invalid')
+                        return []
                     defined_url = mgallery_url
 
             for row in post_rows:
-                post_no = row.get('data-no', '')
+                post_no = row.get('data-no')
                 if not post_no:
                     continue
 
@@ -69,13 +74,28 @@ async def crawl_recommend_posts(gallery_id: str) -> List[Post]:
                 title_element = row.find('td', class_='gall_tit')
                 title = title_element.find('a').get_text(strip=True)
 
-                posts.append(Post(recommends=int(recommend_count),
-                                  url=post_url,
-                                  views=int(views),
-                                  date=date,
-                                  subject=subject,
-                                  writer=writer,
-                                  ip=writer_ip,
-                                  title=title))
+                post_model = PostModel(
+                    recommends=int(recommend_count),
+                    url=post_url,
+                    views=int(views),
+                    date=date,
+                    subject=subject,
+                    writer=writer,
+                    ip=writer_ip,
+                    title=title
+                )
+                post = Post(
+                    recommends=int(recommend_count),
+                    url=post_url,
+                    ip=writer_ip,
+                    views=int(views),
+                    date=date,
+                    subject=subject,
+                    writer=writer,
+                    title=title
+                )
+                posts.append(post_model)
+                session.add(post)
     print(f'{gallery_id} gallery parsing done')
+    session.commit()
     return posts

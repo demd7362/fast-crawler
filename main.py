@@ -1,8 +1,11 @@
+import sys
+import time
+
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import FileResponse
 from starlette.staticfiles import StaticFiles
-
+import asyncio
 from app.router.crawling_router import router as crawling_router
 
 app = FastAPI()
@@ -31,8 +34,9 @@ async def serve_index_html():
 
 
 app.include_router(crawling_router)
-
 if __name__ == "__main__":
     import uvicorn
 
+    # if sys.platform.startswith('win'):
+    #     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     uvicorn.run(app, host="localhost", port=80)
