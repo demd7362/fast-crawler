@@ -14,7 +14,9 @@ export default function WarningMessage({text}: WarningMessageProps) {
                 <Text fontSize="3xl" fontWeight="bold">
                     {text}
                 </Text>
-                <Link to={'/'} target='_blank'>메인으로</Link>
+                <Link to={'/'}>
+                    <Text fontWeight={3}>메인으로</Text>
+                </Link>
             </VStack>
         </Flex>
     )

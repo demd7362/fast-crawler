@@ -2,6 +2,7 @@ from typing import List
 
 import httpx
 from bs4 import BeautifulSoup
+from httpx import Timeout
 from sqlalchemy.orm import Session
 
 from app.base.Bases import Post
@@ -17,7 +18,7 @@ post_url_dict = {
 }
 
 
-async def crawl_recommend_posts(gallery_id: str, session: Session) -> List[PostModel]:
+async def crawl_recommend_posts(gallery_id: str) -> List[PostModel]:
     posts = []
 
     def get_post_url(url: str, post_no: str):
@@ -34,7 +35,7 @@ async def crawl_recommend_posts(gallery_id: str, session: Session) -> List[PostM
         return soup.find_all('tr', class_='us-post')
 
     defined_url = gallery_url
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=Timeout(15.0)) as client:
         for page in range(1, 10000000):
             print(f'{page} page parsing now...')
             post_rows = await get_post_rows(client, defined_url)
@@ -65,7 +66,7 @@ async def crawl_recommend_posts(gallery_id: str, session: Session) -> List[PostM
                 date = date_element.get('title', '')
 
                 subject_element = row.find('td', class_='gall_subject')
-                subject = subject_element.get_text(strip=True)
+                subject = subject_element.get_text(strip=True) if subject_element else ''
 
                 writer_element = row.find('td', class_='gall_writer')
                 writer = writer_element.get('data-nick')
@@ -84,18 +85,6 @@ async def crawl_recommend_posts(gallery_id: str, session: Session) -> List[PostM
                     ip=writer_ip,
                     title=title
                 )
-                post = Post(
-                    recommends=int(recommend_count),
-                    url=post_url,
-                    ip=writer_ip,
-                    views=int(views),
-                    date=date,
-                    subject=subject,
-                    writer=writer,
-                    title=title
-                )
                 posts.append(post_model)
-                session.add(post)
     print(f'{gallery_id} gallery parsing done')
-    session.commit()
     return posts

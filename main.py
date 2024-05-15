@@ -1,11 +1,8 @@
-import sys
-import time
-
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import FileResponse
 from starlette.staticfiles import StaticFiles
-import asyncio
+
 from app.router.crawling_router import router as crawling_router
 
 app = FastAPI()
@@ -16,7 +13,6 @@ app.mount("/static", StaticFiles(directory="./frontend/build/static"), name="sta
 origins = [
     "http://localhost:3000",
 ]
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -25,18 +21,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# API 라우터 포함
+app.include_router(crawling_router)
 
-# index.html 제공
-@app.get("/")
-@app.get("/index")
-async def serve_index_html():
+
+@app.get("/{full_path:path}")
+async def serve_index_html(full_path: str):
+    # API 요청인 경우 처리하지 않음
+    if full_path.startswith("/api/"):
+        return None
     return FileResponse("./frontend/build/index.html")
 
 
-app.include_router(crawling_router)
 if __name__ == "__main__":
     import uvicorn
 
-    # if sys.platform.startswith('win'):
-    #     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     uvicorn.run(app, host="localhost", port=80)
