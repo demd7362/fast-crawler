@@ -1,6 +1,6 @@
 from typing import List
 
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -32,3 +32,7 @@ class CrawlingLog(Base):
     gallery_id: Mapped[str] = mapped_column(String(100))
     crawled_at: Mapped[DateTime] = mapped_column(DateTime())
     posts: Mapped[List["Post"]] = relationship("Post", back_populates="crawling_log", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        UniqueConstraint('gallery_id', 'crawled_at', name='uq_crawling_log_gallery_id_crawled_at'),
+    )
