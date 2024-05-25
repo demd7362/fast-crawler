@@ -6,6 +6,7 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 from app.base.Bases import Base
 
 print('database configuration...')
+# Even if you see this, it's changed.
 DATABASE_URL = "mysql://jhjh:Wjd999888!@144.24.74.58:3306/FC"
 database = databases.Database(DATABASE_URL)
 
